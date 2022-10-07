@@ -21,9 +21,11 @@ def main():
 
 
 def install_some_things(job_i):
-    from cibuildwheel.util import virtualenv
+    from cibuildwheel.util import virtualenv, CIBW_CACHE_PATH
 
     dependency_constraint_flags = ["-c", "constraints.txt"]
+
+    CIBW_CACHE_PATH.mkdir(parents=True, exist_ok=True)
 
     # with venv() as env:
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -34,7 +36,7 @@ def install_some_things(job_i):
                     "-m",
                     "pip",
                     "install",
-                    "pip==22.2.2",
+                    random.choice(["pip==22.2.2", "pip==21.3.1", "pip==20.3.4", ]),
                 ],
                 check=True,
                 env=env,
