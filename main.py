@@ -1,43 +1,73 @@
-import multiprocessing
 import os
 from pathlib import Path
-import random
 import subprocess
 from contextlib import contextmanager
 import sys
 import tempfile
-import concurrent.futures
-import time
+import threading
+import traceback
+import _thread
 
+failures = []
 
 def main():
     # print(install_some_things(0))
 
-    with concurrent.futures.ProcessPoolExecutor(max_workers=20) as executor:
-        results = executor.map(install_some_things, range(200))
+    threads = []
 
-        for result in results:
-            print(result)
+    for thread_i in range(10):
+        t = threading.Thread(target=thread_main, args=(thread_i,))
+        t.daemon = True
+        threads.append(t)
+        t.start()
+
+    for t in threads:
+        t.join()
+
+        if failures:
+            sys.exit(1)
 
 
-def install_some_things(job_i):
-    from cibuildwheel.util import virtualenv, CIBW_CACHE_PATH
 
-    dependency_constraint_flags = ["-c", "constraints.txt"]
+def thread_main(thread_i):
+    # pip_version = random.choice(["22.2.2", "21.3.1", "20.3.4"])  # 💥
+    # pip_version = "20.3.4"  # ✅
+    # pip_version = "22.2.2"  # ✅
+    # pip_version = "21.3.1"  # ✅
+    # pip_version = ["21.3.1", "20.3.4"][thread_i % 2]  # ✅
+    # pip_version = ["22.2.2", "21.3.1", "20.3.4"][thread_i % 3]  # 💥
+    # pip_version = ["22.2.2", "20.3.4"][thread_i % 2]  # 💥
+    # pip_version = ["22.2.2", "21.3.1"][thread_i % 2]  # 💥
+    # pip_version = ["22.2.2", "22.2.1"][thread_i % 2]  # ✅
+    pip_version = ["22.2", "22.1.2"][thread_i % 2]  # 💥
 
-    CIBW_CACHE_PATH.mkdir(parents=True, exist_ok=True)
+    try:
+        install_some_things_in_a_venv(pip_version)
+        print(f'thread {thread_i} done')
+    except subprocess.CalledProcessError as e:
+        print(f'thread {thread_i} failed: {e}')
+        print(e.stdout)
+        print(e.stderr)
+        traceback.print_exc()
+        failures.append(e)
+    except Exception as e:
+        print(f'thread {thread_i} failed: {e}')
+        traceback.print_exc()
+        failures.append(e)
 
-    # with venv() as env:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        env = virtualenv(Path(sys.executable), Path(tmpdir), dependency_constraint_flags)
+
+def install_some_things_in_a_venv(pip_version):
+    with venv() as env:
         subprocess.run(
                 [
                     "python",
                     "-m",
                     "pip",
                     "install",
-                    random.choice(["pip==22.2.2", "pip==21.3.1", "pip==20.3.4", ]),
+                    f"pip=={pip_version}",
                 ],
+                text=True,
+                capture_output=True,
                 check=True,
                 env=env,
             )
@@ -48,16 +78,16 @@ def install_some_things(job_i):
                     "-m",
                     "pip",
                     "install",
-                    *dependency_constraint_flags,
                     "--upgrade",
                     "setuptools",
                     "wheel",
                     "delocate",
                 ],
+                text=True,
+                capture_output=True,
                 check=True,
                 env=env,
             )
-            # time.sleep(random.random() * 0.1)
             subprocess.run(
                 [
                     "python",
@@ -69,10 +99,11 @@ def install_some_things(job_i):
                     "wheel",
                     "delocate",
                 ],
+                text=True,
+                capture_output=True,
                 check=True,
                 env=env,
             )
-    return f'job {job_i} done'
 
 
 @contextmanager
@@ -91,7 +122,6 @@ def venv():
 
         env = os.environ.copy()
         env["PATH"] = f"{tmp_path}/bin{os.pathsep}{env['PATH']}"
-        env["PIP_CACHE_DIR"] = f"./pip-cache"
 
         active_python = subprocess.run(
             ["python", "-c", "import sys; print(sys.executable)"],
