@@ -77,7 +77,7 @@ def venv():
         )
 
         env = os.environ.copy()
-        env["PATH"] = f"{tmp_path}/bin:{env['PATH']}"
+        env["PATH"] = f"{tmp_path}/bin{os.pathsep}{env['PATH']}"
         env["PIP_CACHE_DIR"] = f"./pip-cache"
 
         active_python = subprocess.run(
@@ -87,7 +87,10 @@ def venv():
             env=env,
         ).stdout.strip()
 
-        assert Path(active_python).resolve() == Path(f"{tmp_path}/bin/python").resolve()
+        if sys.platform == 'win32':
+            assert Path(active_python).resolve() == Path(f"{tmp_path}/python").resolve()
+        else:
+            assert Path(active_python).resolve() == Path(f"{tmp_path}/bin/python").resolve()
 
         yield env
 
