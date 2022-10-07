@@ -12,40 +12,50 @@ import time
 
 def main():
     # print(install_some_things(0))
+
     with concurrent.futures.ProcessPoolExecutor(max_workers=20) as executor:
-        results = executor.map(install_some_things, range(20))
+        results = executor.map(install_some_things, range(200))
 
         for result in results:
             print(result)
 
 
 def install_some_things(job_i):
-    with venv() as env:
+    from cibuildwheel.util import virtualenv
+
+    dependency_constraint_flags = ["-c", "constraints.txt"]
+
+    # with venv() as env:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        env = virtualenv(Path(sys.executable), Path(tmpdir), dependency_constraint_flags)
         subprocess.run(
                 [
                     "python",
                     "-m",
                     "pip",
                     "install",
-                    "pip==10.0.1",
+                    "pip==22.2.2",
                 ],
                 check=True,
                 env=env,
             )
         for _ in range(10):
-            time.sleep(random.random() * 0.1)
             subprocess.run(
                 [
                     "python",
                     "-m",
                     "pip",
                     "install",
+                    *dependency_constraint_flags,
+                    "--upgrade",
                     "setuptools",
                     "wheel",
+                    "delocate",
                 ],
                 check=True,
                 env=env,
             )
+            # time.sleep(random.random() * 0.1)
             subprocess.run(
                 [
                     "python",
@@ -55,6 +65,7 @@ def install_some_things(job_i):
                     "-y",
                     "setuptools",
                     "wheel",
+                    "delocate",
                 ],
                 check=True,
                 env=env,
@@ -72,7 +83,7 @@ def venv():
                 sys.executable,
                 "-m",
                 "venv",
-                tmp_path,
+                str(tmp_path),
             ]
         )
 
