@@ -1,10 +1,12 @@
 import os
 from pathlib import Path
+import random
 import subprocess
 from contextlib import contextmanager
 import sys
 import tempfile
 import threading
+import time
 import traceback
 import _thread
 
@@ -15,7 +17,7 @@ def main():
 
     threads = []
 
-    for thread_i in range(10):
+    for thread_i in range(20):
         t = threading.Thread(target=thread_main, args=(thread_i,))
         t.daemon = True
         threads.append(t)
@@ -121,7 +123,11 @@ def venv():
         )
 
         env = os.environ.copy()
-        env["PATH"] = f"{tmp_path}/bin{os.pathsep}{env['PATH']}"
+
+        if sys.platform == 'win32':
+            env["PATH"] = os.pathsep.join([tmp_path, f"{tmp_path}/Scripts", env['PATH']])
+        else:
+            env["PATH"] = os.pathsep.join([f"{tmp_path}/bin", env['PATH']])
 
         active_python = subprocess.run(
             ["python", "-c", "import sys; print(sys.executable)"],
@@ -131,7 +137,7 @@ def venv():
         ).stdout.strip()
 
         if sys.platform == 'win32':
-            assert Path(active_python).resolve() == Path(f"{tmp_path}/python").resolve()
+            assert Path(active_python).resolve() == Path(f"{tmp_path}/python").resolve(), f'active_python mismatch: {active_python}, {tmp_path}'
         else:
             assert Path(active_python).resolve() == Path(f"{tmp_path}/bin/python").resolve()
 
