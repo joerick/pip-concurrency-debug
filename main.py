@@ -125,7 +125,7 @@ def venv():
         env = os.environ.copy()
 
         if sys.platform == 'win32':
-            env["PATH"] = os.pathsep.join([tmp_path, f"{tmp_path}/Scripts", env['PATH']])
+            env["PATH"] = os.pathsep.join([str(tmp_path), f"{tmp_path}/Scripts", env['PATH']])
         else:
             env["PATH"] = os.pathsep.join([f"{tmp_path}/bin", env['PATH']])
 
