@@ -141,7 +141,7 @@ def venv():
 
         if sys.platform == "win32":
             assert (
-                Path(active_python).resolve() == Path(f"{tmp_path}/python").resolve()
+                Path(active_python).resolve() == Path(f"{tmp_path}\\Scripts\\python.exe").resolve()
             ), f"active_python mismatch: {active_python}, {tmp_path}"
         else:
             assert (
