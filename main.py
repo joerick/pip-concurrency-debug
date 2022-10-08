@@ -130,6 +130,9 @@ def venv():
             )
         else:
             env["PATH"] = os.pathsep.join([f"{tmp_path}/bin", env["PATH"]])
+        
+        # uncomment this to give each venv a separate cache, which seems to fix the issue
+        env["PIP_CACHE_DIR"] = str(tmp_path / "pip_cache")
 
         active_python = subprocess.run(
             ["python", "-c", "import sys; print(sys.executable)"],
